@@ -1,6 +1,9 @@
 # main.py
 from fastapi import FastAPI
-from app.routers import generation, deployments, agents, metrics
+from app.routers.generation import router as generation_router
+from app.routers.deployments import router as deployments_router
+from app.routers.agents import router as agents_router
+from app.routers.metrics import router as metrics_router
 from app.services.mongodb_exporter import MongoDBExporter
 import threading
 import logging
@@ -8,10 +11,10 @@ import logging
 app = FastAPI()
 
 # Include routers
-app.include_router(generation.router)
-app.include_router(deployments.router)
-app.include_router(agents.router)
-app.include_router(metrics.router)
+app.include_router(generation_router)
+app.include_router(deployments_router)
+app.include_router(agents_router)
+app.include_router(metrics_router)
 
 # Start Prometheus metrics exporter in a separate thread
 def start_metrics_exporter():
