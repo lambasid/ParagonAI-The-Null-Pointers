@@ -3,3 +3,6 @@
 specs
 .venv
 .DS_Store
+
+back-end/.venv/
+back-end/.env
