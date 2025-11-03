@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { X, Copy, Check } from 'lucide-react'
+import agentsData from '@/Data/agents.json'
 
 interface CommandOutput {
+  id: string
   type: 'command' | 'output' | 'error'
   content: string
   timestamp: Date
@@ -63,14 +65,18 @@ const mockCommands: { [key: string]: (args: string[]) => string } = {
   },
 
   'paragon status': () => {
+    const agents = (agentsData as any).agents.filter((a: any) => a.status)
+    const count = agents.length
+    const list = agents
+      .slice(0, 10) // keep output concise
+      .map((a: any) => `  - ${a.name.replace(/\s+/g, '-').toLowerCase()} (${a.status === 'healthy' ? 'running' : a.status})`)
+      .join('\n')
     return `ParagonAI CLI Status:
 ✓ Connected to ParagonAI Cloud
 ✓ Authenticated as: user@example.com
 ✓ Workspace: /home/paragon
-✓ Active agents: 3
-  - api-agent (running)
-  - chat-bot (running)
-  - data-processor (deploying)`
+✓ Active agents: ${count}
+${list}`
   },
 
   'help': () => {
@@ -90,8 +96,8 @@ const mockCommands: { [key: string]: (args: string[]) => string } = {
 export default function CloudShell({ isOpen, onClose }: CloudShellProps) {
   const [input, setInput] = useState('')
   const [outputs, setOutputs] = useState<CommandOutput[]>([
-    { type: 'output', content: 'Welcome to ParagonAI Cloud Shell!', timestamp: new Date() },
-    { type: 'output', content: 'Type "help" to see available commands.', timestamp: new Date() },
+    { id: `welcome-${Date.now()}`, type: 'output', content: 'Welcome to ParagonAI Cloud Shell!', timestamp: new Date() },
+    { id: `help-${Date.now()}`, type: 'output', content: 'Type "help" to see available commands.', timestamp: new Date() },
   ])
   const [commandHistory, setCommandHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
@@ -149,8 +155,10 @@ export default function CloudShell({ isOpen, onClose }: CloudShellProps) {
     const trimmedCmd = cmd.trim()
     if (!trimmedCmd) return
 
+    const commandId = `cmd-${Date.now()}-${Math.random()}`
     // Add command to output
     setOutputs(prev => [...prev, {
+      id: commandId,
       type: 'command',
       content: trimmedCmd,
       timestamp: new Date()
@@ -196,26 +204,29 @@ export default function CloudShell({ isOpen, onClose }: CloudShellProps) {
         setOutputs([])
       } else {
         // Animate output character by character
+        const outputId = `out-${Date.now()}-${Math.random()}`
         let charIndex = 0
+        let timeoutId: NodeJS.Timeout | null = null
+        
         const animateOutput = () => {
           if (charIndex < response.length) {
             setOutputs(prev => {
-              // Remove any partial output
-              const filtered = prev.filter((out, idx) => 
-                !(idx === prev.length - 1 && out.type === 'output' && out.content.length < response.length)
-              )
-              // Add new partial output
+              // Remove the current animating output if it exists
+              const filtered = prev.filter(out => out.id !== outputId)
+              // Add new partial output with the same ID
               return [...filtered, {
+                id: outputId,
                 type: 'output',
                 content: response.slice(0, charIndex + 1),
                 timestamp: new Date()
               }]
             })
             charIndex++
-            setTimeout(animateOutput, 20)
+            timeoutId = setTimeout(animateOutput, 20)
           } else {
             // Add final newline for spacing
             setOutputs(prev => [...prev, {
+              id: `spacer-${Date.now()}-${Math.random()}`,
               type: 'output',
               content: '',
               timestamp: new Date()
@@ -223,6 +234,11 @@ export default function CloudShell({ isOpen, onClose }: CloudShellProps) {
           }
         }
         animateOutput()
+        
+        // Cleanup function (though we're not returning it, React will handle cleanup)
+        return () => {
+          if (timeoutId) clearTimeout(timeoutId)
+        }
       }
     }, 300)
   }, [])
@@ -277,8 +293,8 @@ export default function CloudShell({ isOpen, onClose }: CloudShellProps) {
             scrollBehavior: 'smooth'
           }}
         >
-          {outputs.map((output, index) => (
-            <div key={index} className="mb-2 group">
+          {outputs.map((output) => (
+            <div key={output.id} className="mb-2 group">
               {output.type === 'command' && (
                 <div className="flex items-center space-x-2 mb-1">
                   <span className="text-secondary">paragon@cloud:~$</span>
@@ -299,10 +315,10 @@ export default function CloudShell({ isOpen, onClose }: CloudShellProps) {
                     }>{output.content}</span>
                   </pre>
                   <button
-                    onClick={() => copyToClipboard(output.content, index)}
+                    onClick={() => copyToClipboard(output.content, outputs.indexOf(output))}
                     className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-[#1F1F1F] rounded"
                   >
-                    {copiedIndex === index ? (
+                    {copiedIndex === outputs.indexOf(output) ? (
                       <Check className="w-4 h-4 text-secondary" />
                     ) : (
                       <Copy className="w-4 h-4 text-text/50" />
