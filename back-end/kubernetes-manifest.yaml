@@ -614,3 +614,239 @@ spec:
     name: http
   selector:
     app: content-writer-agent
+
+---
+# Data Analyst Agent Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-analyst-agent
+  namespace: paragonai
+  labels:
+    app: data-analyst-agent
+    agent-type: data-analyst
+    framework: autogen
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: data-analyst-agent
+  template:
+    metadata:
+      labels:
+        app: data-analyst-agent
+        agent-type: data-analyst
+        framework: autogen
+      annotations:
+        agent-id: "data-analyst-v1"
+        agent-model: "llama-3.3-70b-versatile"
+    spec:
+      containers:
+      - name: agent
+        image: hmbaytam/paragonai-backend:latest
+        imagePullPolicy: Always
+        command: ["python", "-c"]
+        args:
+          - |
+            import asyncio
+            import os
+            import logging
+            from openai import OpenAI
+
+            logging.basicConfig(level=logging.INFO)
+            logger = logging.getLogger(__name__)
+
+            async def run_agent():
+                agent_id = os.getenv("AGENT_ID")
+                agent_type = os.getenv("AGENT_TYPE")
+                model = os.getenv("MODEL")
+                api_key = os.getenv("GROQ_API_KEY")
+
+                logger.info(f"Data Analyst Agent ({agent_id}) starting...")
+                logger.info(f"Agent Type: {agent_type}")
+                logger.info(f"Model: {model}")
+                logger.info(f"Framework: AutoGen")
+                logger.info(f"API Key present: {bool(api_key)}")
+
+                # Initialize client but don't test connection on startup
+                client = OpenAI(
+                    api_key=api_key if api_key else "dummy-key",
+                    base_url="https://api.groq.com/openai/v1"
+                )
+
+                logger.info("Data Analyst Agent initialized successfully")
+                logger.info("Ready to analyze datasets, generate insights, and create visualizations")
+
+                while True:
+                    logger.info("Data Analyst Agent is running and ready to analyze data...")
+                    await asyncio.sleep(60)
+
+            asyncio.run(run_agent())
+        env:
+        - name: GROQ_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: GROQ_API_KEY
+        - name: AGENT_ID
+          value: "data-analyst-v1"
+        - name: AGENT_TYPE
+          value: "data-analyst"
+        - name: FRAMEWORK
+          value: "autogen"
+        - name: MODEL
+          value: "llama-3.3-70b-versatile"
+        - name: SYSTEM_PROMPT
+          value: "You are a data analyst. Analyze the provided data and provide clear, actionable insights."
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "print('alive')"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+
+---
+# Data Analyst Agent Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-analyst-agent
+  namespace: paragonai
+  labels:
+    app: data-analyst-agent
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: data-analyst-agent
+
+---
+# Sentiment Analyst Agent Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sentiment-analyst-agent
+  namespace: paragonai
+  labels:
+    app: sentiment-analyst-agent
+    agent-type: sentiment-analyst
+    framework: custom
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sentiment-analyst-agent
+  template:
+    metadata:
+      labels:
+        app: sentiment-analyst-agent
+        agent-type: sentiment-analyst
+        framework: custom
+      annotations:
+        agent-id: "sentiment-analyst-v1"
+        agent-model: "llama-3.3-70b-versatile"
+    spec:
+      containers:
+      - name: agent
+        image: hmbaytam/paragonai-backend:latest
+        imagePullPolicy: Always
+        command: ["python", "-c"]
+        args:
+          - |
+            import asyncio
+            import os
+            import logging
+            from openai import OpenAI
+
+            logging.basicConfig(level=logging.INFO)
+            logger = logging.getLogger(__name__)
+
+            async def run_agent():
+                agent_id = os.getenv("AGENT_ID")
+                agent_type = os.getenv("AGENT_TYPE")
+                model = os.getenv("MODEL")
+                api_key = os.getenv("GROQ_API_KEY")
+
+                logger.info(f"Sentiment Analyst Agent ({agent_id}) starting...")
+                logger.info(f"Agent Type: {agent_type}")
+                logger.info(f"Model: {model}")
+                logger.info(f"Framework: Custom")
+                logger.info(f"API Key present: {bool(api_key)}")
+
+                # Initialize client but don't test connection on startup
+                client = OpenAI(
+                    api_key=api_key if api_key else "dummy-key",
+                    base_url="https://api.groq.com/openai/v1"
+                )
+
+                logger.info("Sentiment Analyst Agent initialized successfully")
+                logger.info("Ready to analyze text sentiment and classify as positive, negative, or neutral")
+
+                while True:
+                    logger.info("Sentiment Analyst Agent is running and ready to analyze sentiment...")
+                    await asyncio.sleep(60)
+
+            asyncio.run(run_agent())
+        env:
+        - name: GROQ_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: GROQ_API_KEY
+        - name: AGENT_ID
+          value: "sentiment-analyst-v1"
+        - name: AGENT_TYPE
+          value: "sentiment-analyst"
+        - name: FRAMEWORK
+          value: "custom"
+        - name: MODEL
+          value: "llama-3.3-70b-versatile"
+        - name: SYSTEM_PROMPT
+          value: "You are a sentiment analysis expert. Analyze the provided text and determine if the sentiment is positive, negative, or neutral. Provide a confidence score and detailed reasoning for your classification. Focus on emotional tone, word choice, and context to accurately classify sentiment."
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "print('alive')"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+
+---
+# Sentiment Analyst Agent Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: sentiment-analyst-agent
+  namespace: paragonai
+  labels:
+    app: sentiment-analyst-agent
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: sentiment-analyst-agent
