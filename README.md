@@ -1,4 +1,7 @@
 # ParagonAI | The Null Pointers
+
+Live preview? Click here. https://paragon-ai-the-null-pointers.vercel.app/about
+
 Canada DevOps Community of Practice Hackathon Toronto - Team 3 
 
 Project Name - ParagonAI | The Null Pointers
